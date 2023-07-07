@@ -30,6 +30,8 @@ import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rsyntaxtextarea.SyntaxConstants;
 import org.fife.ui.rtextarea.Gutter;
 import org.fife.ui.rtextarea.RTextScrollPane;
+import org.openide.DialogDisplayer;
+import org.openide.NotifyDescriptor;
 import org.openide.awt.ActionID;
 import org.openide.awt.ActionReference;
 import org.openide.util.ImageUtilities;
@@ -256,7 +258,12 @@ public class ChatTopComponent extends TopComponent {
                     appendToOutputDocument(System.lineSeparator());
                     StringBuilder gptResponse = new StringBuilder();
                     service.streamChatCompletion(chatCompletionRequest)
-                            .doOnError(Throwable::printStackTrace)
+                            .doOnError(throwable -> {
+                                String errorMessage = "Error calling OpenAI API: " + throwable.getMessage();
+                                SwingUtilities.invokeLater(() -> {
+                                    JOptionPane.showMessageDialog(ChatTopComponent.this, errorMessage, "API Error", JOptionPane.ERROR_MESSAGE);
+                                });
+                            })
                             .blockingForEach(new Consumer<ChatCompletionChunk>() {
                                 StringBuilder codeBlockIndicatorBuffer = new StringBuilder();
 
