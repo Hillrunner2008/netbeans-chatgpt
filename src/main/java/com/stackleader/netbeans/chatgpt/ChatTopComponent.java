@@ -12,18 +12,18 @@ import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Dimension;
-import java.awt.Graphics;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.Insets;
 import javax.swing.*;
 import javax.swing.border.TitledBorder;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
-import java.awt.image.BufferedImage;
 import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
-import javax.swing.text.BadLocationException;
 import org.commonmark.parser.Parser;
 import org.commonmark.renderer.html.HtmlRenderer;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
@@ -32,7 +32,6 @@ import org.fife.ui.rtextarea.Gutter;
 import org.fife.ui.rtextarea.RTextScrollPane;
 import org.openide.awt.ActionID;
 import org.openide.awt.ActionReference;
-import org.openide.util.Exceptions;
 import org.openide.util.ImageUtilities;
 import org.openide.util.NbBundle;
 import org.openide.windows.TopComponent;
@@ -61,13 +60,14 @@ public class ChatTopComponent extends TopComponent {
     private static final int BUTTON_HEIGHT = 25;
     private static final int ACTIONS_PANEL_WIDTH = 20;
     public static final String QUICK_COPY_TEXT = "(Quick Copy: Ctrl+Click here)";
-    
+
     private RSyntaxTextArea outputTextArea;
     private final static List<ChatMessage> messages = new CopyOnWriteArrayList<>();
     private final static Parser parser = Parser.builder().build();
     private final static HtmlRenderer htmlRenderer = HtmlRenderer.builder().build();
     private Gutter gutter;
     private boolean shouldAnnotateCodeBlock = true;
+    private JComboBox<String> modelSelection;
 
     public ChatTopComponent() {
         setName(NbBundle.getMessage(ChatTopComponent.class, "Chat_TopComponent_Title")); // NOI18N
@@ -155,14 +155,23 @@ public class ChatTopComponent extends TopComponent {
 
     private JPanel createButtonPanel() {
         JPanel buttonPanel = new JPanel();
-        buttonPanel.setLayout(new BoxLayout(buttonPanel, BoxLayout.Y_AXIS));
-        buttonPanel.add(Box.createVerticalGlue());
+        buttonPanel.setLayout(new GridBagLayout());
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.weightx = 1.0;
+        gbc.gridy = 0;
+        gbc.gridx = 0;
+        gbc.insets = new Insets(0, 5, 5, 5);
+        String[] models = {"gpt-3.5-turbo-16k-0613", "gpt-4"};
+        modelSelection = new JComboBox<>(models);
+        modelSelection.setSelectedItem("gpt-3.5-turbo-16k-0613");
+        buttonPanel.add(modelSelection, gbc);
+        gbc.gridy++;
         JButton resetButton = createResetButton();
-        buttonPanel.add(resetButton);
-        buttonPanel.add(Box.createRigidArea(new Dimension(0, 10)));
+        buttonPanel.add(resetButton, gbc);
+        gbc.gridy++;
         JButton submitButton = createSubmitButton();
-        buttonPanel.add(submitButton);
-        buttonPanel.add(Box.createVerticalGlue());
+        buttonPanel.add(submitButton, gbc);
         return buttonPanel;
     }
 
@@ -218,7 +227,7 @@ public class ChatTopComponent extends TopComponent {
 
     private void submit() {
         String userInput = inputTextArea.getText();
-
+        String selectedModel = (String) modelSelection.getSelectedItem(); // Get the selected model
         SwingWorker<Void, Void> worker = new SwingWorker<Void, Void>() {
             @Override
             protected Void doInBackground() throws Exception {
@@ -236,7 +245,7 @@ public class ChatTopComponent extends TopComponent {
                 // Create chat completion request
                 ChatCompletionRequest chatCompletionRequest = ChatCompletionRequest
                         .builder()
-                        .model("gpt-3.5-turbo")
+                        .model(selectedModel)
                         .messages(messages)
                         .n(1)
                         .maxTokens(1000)
