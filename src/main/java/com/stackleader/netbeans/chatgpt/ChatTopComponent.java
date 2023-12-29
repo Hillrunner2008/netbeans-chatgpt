@@ -24,6 +24,8 @@ import java.awt.event.KeyEvent;
 import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.prefs.BackingStoreException;
+import java.util.prefs.Preferences;
 import org.commonmark.parser.Parser;
 import org.commonmark.renderer.html.HtmlRenderer;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
@@ -34,6 +36,7 @@ import org.openide.DialogDisplayer;
 import org.openide.NotifyDescriptor;
 import org.openide.awt.ActionID;
 import org.openide.awt.ActionReference;
+import org.openide.util.Exceptions;
 import org.openide.util.ImageUtilities;
 import org.openide.util.NbBundle;
 import org.openide.windows.TopComponent;
@@ -70,24 +73,49 @@ public class ChatTopComponent extends TopComponent {
     private Gutter gutter;
     private boolean shouldAnnotateCodeBlock = true;
     private JComboBox<String> modelSelection;
+    private OpenAiService service;
 
     public ChatTopComponent() {
         setName(NbBundle.getMessage(ChatTopComponent.class, "Chat_TopComponent_Title")); // NOI18N
         setLayout(new BorderLayout());
-        String token = System.getenv("OPENAI_TOKEN");
-        if (token == null || token.isBlank()) {
-            add(createMissingTokenBanner(), BorderLayout.CENTER);
-        } else {
-            addComponentsToFrame();
-            service = new OpenAiService(token);
+        Configuration config = Configuration.getInstance();
+        Preferences prefs = config.getPreferences();
+        try {
+            prefs.clear();
+        } catch (BackingStoreException ex) {
+            Exceptions.printStackTrace(ex);
         }
+        String token = prefs.get(Configuration.OPENAI_TOKEN_KEY, null);
+        if (token == null || token.isBlank()) {
+            token = promptForToken();
+            if (token != null && !token.isBlank()) {
+                prefs.put(Configuration.OPENAI_TOKEN_KEY, token);
+            } else {
+                add(createMissingTokenBanner(), BorderLayout.CENTER);
+                return;
+            }
+        }
+        addComponentsToFrame();
+        service = new OpenAiService(token);
+
     }
-    private OpenAiService service;
+
+    private String promptForToken() {
+        NotifyDescriptor.InputLine inputLine = new NotifyDescriptor.InputLine(
+                "Enter OpenAI API Token:",
+                "API Token Required"
+        );
+        if (DialogDisplayer.getDefault().notify(inputLine) == NotifyDescriptor.OK_OPTION) {
+            return inputLine.getInputText();
+        }
+        return null;
+    }
 
     @Override
     protected void componentOpened() {
         super.componentOpened();
-        setName(NbBundle.getMessage(ChatTopComponent.class, "Chat_TopComponent_Title")); // NOI18N
+        setName(NbBundle.getMessage(ChatTopComponent.class,
+                "Chat_TopComponent_Title")); // NOI18N
     }
 
     private void addComponentsToFrame() {
@@ -113,8 +141,32 @@ public class ChatTopComponent extends TopComponent {
         actionsPanel.setLayout(new BoxLayout(actionsPanel, BoxLayout.Y_AXIS));
         actionsPanel.setPreferredSize(new Dimension(ACTIONS_PANEL_WIDTH, 500));
         JButton optionsButton = new JButton(ImageUtilities.loadImageIcon("icons/options.png", true));
+        optionsButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                handleOptionsButtonClick();
+            }
+        });
         actionsPanel.add(optionsButton);
         return actionsPanel;
+    }
+
+    private void handleOptionsButtonClick() {
+        Configuration config = Configuration.getInstance();
+        Preferences prefs = config.getPreferences();
+        String currentToken = prefs.get(Configuration.OPENAI_TOKEN_KEY, "");
+
+        NotifyDescriptor.InputLine inputLine = new NotifyDescriptor.InputLine(
+                "OpenAI API Token:",
+                "Edit API Token"
+        );
+        inputLine.setInputText(currentToken);
+
+        if (DialogDisplayer.getDefault().notify(inputLine) == NotifyDescriptor.OK_OPTION) {
+            String newToken = inputLine.getInputText();
+            prefs.put(Configuration.OPENAI_TOKEN_KEY, newToken);
+            service = new OpenAiService(newToken);
+        }
     }
 
     private JPanel createOutputScrollPane() {

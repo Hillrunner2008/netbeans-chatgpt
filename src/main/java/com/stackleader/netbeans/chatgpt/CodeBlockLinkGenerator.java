@@ -9,7 +9,6 @@ import java.awt.datatransfer.Clipboard;
 import java.awt.datatransfer.StringSelection;
 import java.awt.Toolkit;
 import javax.swing.event.HyperlinkEvent;
-import javax.swing.text.BadLocationException;
 import org.fife.ui.rsyntaxtextarea.*;
 
 public class CodeBlockLinkGenerator implements LinkGenerator {
@@ -52,7 +51,7 @@ public class CodeBlockLinkGenerator implements LinkGenerator {
                     }
                 };
             }
-        } catch (BadLocationException ex) {
+        } catch (Exception ex) {
             LOG.log(System.Logger.Level.ERROR, "CodeBlockLinkGenerator failed", ex);
         }
         return null;
