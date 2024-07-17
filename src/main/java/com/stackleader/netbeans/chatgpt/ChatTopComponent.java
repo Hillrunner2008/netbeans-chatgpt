@@ -24,7 +24,6 @@ import java.awt.event.KeyEvent;
 import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.prefs.BackingStoreException;
 import java.util.prefs.Preferences;
 import org.commonmark.parser.Parser;
 import org.commonmark.renderer.html.HtmlRenderer;
@@ -36,7 +35,6 @@ import org.openide.DialogDisplayer;
 import org.openide.NotifyDescriptor;
 import org.openide.awt.ActionID;
 import org.openide.awt.ActionReference;
-import org.openide.util.Exceptions;
 import org.openide.util.ImageUtilities;
 import org.openide.util.NbBundle;
 import org.openide.windows.TopComponent;
@@ -80,11 +78,6 @@ public class ChatTopComponent extends TopComponent {
         setLayout(new BorderLayout());
         Configuration config = Configuration.getInstance();
         Preferences prefs = config.getPreferences();
-        try {
-            prefs.clear();
-        } catch (BackingStoreException ex) {
-            Exceptions.printStackTrace(ex);
-        }
         String token = prefs.get(Configuration.OPENAI_TOKEN_KEY, null);
         if (token == null || token.isBlank()) {
             token = promptForToken();
@@ -216,9 +209,9 @@ public class ChatTopComponent extends TopComponent {
         gbc.gridy = 0;
         gbc.gridx = 0;
         gbc.insets = new Insets(0, 5, 5, 5);
-        String[] models = {"gpt-3.5-turbo-16k-0613", "gpt-4"};
+        String[] models = {"gpt-3.5-turbo-1106","gpt-3.5-turbo-16k-0613", "gpt-4o"};
         modelSelection = new JComboBox<>(models);
-        modelSelection.setSelectedItem("gpt-3.5-turbo-16k-0613");
+        modelSelection.setSelectedItem("gpt-4o");
         buttonPanel.add(modelSelection, gbc);
         gbc.gridy++;
         JButton resetButton = createResetButton();
